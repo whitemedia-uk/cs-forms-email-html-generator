@@ -1,24 +1,686 @@
 <!--
-MIT License
+  CS Form Email Builder
+  =====================
+  A standalone browser tool for generating Cornerstone (Themeco) Form
+  email notification templates using dynamic content (DC) tags.
 
-Copyright (c) 2026 Christopher White
-White Media
+  Built by Christopher White — White Media
+  https://www.whitemedia.uk/
+  Built with assistance from Claude (Anthropic)
+  Version 1.0 — March 2026
+
+  MIT Licence
+  -----------
+  Copyright (c) 2026 Christopher White, White Media
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Builder</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS Form Email Builder</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f4f4f2;
+  --surface: #ffffff;
+  --surface2: #f9f9f8;
+  --border: #e2e2de;
+  --border2: #d0d0cb;
+  --text: #1a1a18;
+  --text2: #6b6b68;
+  --text3: #9a9a96;
+  --accent: #1a1a18;
+  --accent-light: #f0f0ee;
+  --danger: #c0392b;
+  --danger-light: #fdf0ef;
+  --info: #1a6bbf;
+  --info-light: #edf4fc;
+  --success: #2e7d52;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+
+body { font-family: var(--font); font-size: 13px; background: var(--bg); color: var(--text); line-height: 1.5; }
+
+.app-header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 11px 20px; display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; z-index: 200;
+}
+.app-header h1 { font-size: 14px; font-weight: 600; }
+.app-header .tagline { font-size: 12px; color: var(--text2); }
+.spacer { flex: 1; }
+
+.layout {
+  display: grid;
+  grid-template-columns: 260px 1fr 400px;
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .layout { grid-template-columns: 240px 1fr; }
+  .col-output { grid-column: 1 / -1; border-top: 1px solid var(--border); border-left: none; }
+}
+@media (max-width: 720px) {
+  .layout { grid-template-columns: 1fr; }
+  .col-output { grid-column: 1; }
+  .app-header .tagline { display: none; }
+}
+
+.col {
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.col:last-child { border-right: none; }
+.col-output { border-right: none; border-left: 1px solid var(--border); }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.panel-head {
+  padding: 8px 12px; background: var(--surface2); border-bottom: 1px solid var(--border);
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.7px;
+  color: var(--text2); display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.panel-body { padding: 12px; display: flex; flex-direction: column; gap: 9px; }
+
+label.lbl { font-size: 11px; color: var(--text2); font-weight: 500; display: block; margin-bottom: 3px; }
+input[type=text], select {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--border2); border-radius: var(--radius);
+  font-size: 12px; font-family: var(--font); color: var(--text); background: var(--surface);
+}
+input[type=text]:focus, select:focus { outline: none; border-color: var(--accent); }
+input[type=color] { width: 34px; height: 28px; padding: 2px 3px; cursor: pointer; border: 1px solid var(--border2); border-radius: var(--radius); flex-shrink: 0; }
+.color-row { display: flex; gap: 6px; align-items: center; }
+.color-row input[type=text] { flex: 1; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.radio-row { display: flex; border: 1px solid var(--border2); border-radius: var(--radius); overflow: hidden; }
+.radio-row input[type=radio] { display: none; }
+.radio-row label { flex: 1; text-align: center; padding: 5px 4px; font-size: 11px; font-weight: 500; cursor: pointer; color: var(--text2); }
+.radio-row input[type=radio]:checked + label { background: var(--accent); color: #fff; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px;
+  border: 1px solid var(--border2); border-radius: var(--radius);
+  font-size: 12px; font-family: var(--font); font-weight: 500;
+  cursor: pointer; background: var(--surface); color: var(--text); white-space: nowrap; transition: background 0.1s;
+}
+.btn:hover { background: var(--accent-light); }
+.btn:active { transform: scale(0.98); }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.primary:hover { background: #333; }
+.btn.danger { color: var(--danger); border-color: #e8c5c2; }
+.btn.danger:hover { background: var(--danger-light); }
+.btn.sm { padding: 3px 8px; font-size: 11px; }
+.btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+.section-block { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 8px; transition: border-color 0.15s; }
+.section-block:last-child { margin-bottom: 0; }
+.section-block.drop-target { border-color: var(--info); background: var(--info-light); }
+.section-head { padding: 7px 10px; background: var(--surface2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 7px; cursor: grab; user-select: none; }
+.section-head:active { cursor: grabbing; }
+.handle { color: var(--text3); font-size: 12px; flex-shrink: 0; }
+.section-name { flex: 1; border: none; background: transparent; font-size: 12px; font-weight: 600; color: var(--text); outline: none; padding: 0; min-width: 0; }
+.section-body { padding: 8px; min-height: 34px; }
+.section-empty { font-size: 11px; color: var(--text3); text-align: center; padding: 6px; font-style: italic; }
+
+.field-chip { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); margin-bottom: 4px; cursor: grab; user-select: none; }
+.field-chip:last-child { margin-bottom: 0; }
+.field-chip:active { cursor: grabbing; }
+.field-chip.dragging { opacity: 0.3; }
+.chip-label { flex: 1; font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-key { font-size: 10px; color: var(--text3); font-family: var(--mono); }
+.type-pill { font-size: 10px; padding: 2px 6px; border-radius: 20px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); flex-shrink: 0; }
+
+.unassigned-zone { min-height: 40px; border: 1px dashed var(--border2); border-radius: var(--radius); padding: 6px; background: var(--surface2); transition: border-color 0.15s, background 0.15s; }
+.unassigned-zone.drop-target { border-color: var(--info); background: var(--info-light); }
+
+.add-field-panel { border: 1px solid var(--info); border-radius: var(--radius-lg); overflow: hidden; }
+.add-field-panel .aph { padding: 8px 12px; background: var(--info-light); border-bottom: 1px solid #c8dcf0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.7px; color: var(--info); display: flex; align-items: center; justify-content: space-between; }
+.add-field-panel .apb { padding: 12px; background: var(--info-light); display: flex; flex-direction: column; gap: 9px; }
+
+.tab-bar { display: flex; background: var(--surface2); border-bottom: 1px solid var(--border); }
+.tab-btn { padding: 8px 14px; font-size: 12px; font-weight: 500; color: var(--text2); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: var(--font); }
+.tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+
+.code-output {
+  font-family: var(--mono); font-size: 11px; line-height: 1.6;
+  background: #1e1e1e; color: #d4d4d4; padding: 14px;
+  white-space: pre-wrap; word-break: break-all;
+  min-height: 300px; max-height: 600px; overflow-y: auto;
+}
+.code-placeholder { color: #666; font-style: italic; }
+.output-footer { padding: 10px 12px; border-top: 1px solid var(--border); background: var(--surface); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.preview-wrap { background: #e0e0e0; padding: 12px; }
+.preview-wrap iframe { width: 100%; border: none; border-radius: var(--radius); display: block; background: #fff; min-height: 300px; }
+
+.status-msg { font-size: 11px; color: var(--text2); }
+.status-msg.ok  { color: var(--success); }
+.status-msg.err { color: var(--danger); }
+.empty-msg { font-size: 11px; color: var(--text3); font-style: italic; text-align: center; padding: 6px 0; }
+.preset-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); margin-bottom: 4px; }
+.preset-row:last-child { margin-bottom: 0; }
+.preset-name { font-size: 12px; font-weight: 500; flex: 1; }
+</style>
 </head>
 <body>
-    <h1>Email Builder</h1>
-    <form>
-        <label for="subject">Subject:</label>
-        <input type="text" id="subject" name="subject"><br><br>
-        <label for="body">Email Body:</label><br>
-        <textarea id="body" name="body" rows="10" cols="30"></textarea><br><br>
-        <button type="submit">Send Email</button>
-    </form>
+
+<div class="app-header">
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="7" height="7" rx="1.5" fill="#1a1a18"/><rect x="10" y="1" width="7" height="7" rx="1.5" fill="#1a1a18" opacity="0.35"/><rect x="1" y="10" width="7" height="7" rx="1.5" fill="#1a1a18" opacity="0.35"/><rect x="10" y="10" width="7" height="7" rx="1.5" fill="#1a1a18" opacity="0.15"/></svg>
+  <h1>CS Form Email Builder</h1>
+  <span class="tagline">Cornerstone dynamic content email templates</span>
+  <div class="spacer"></div>
+  <button class="btn primary" onclick="generate()">&#9654;&nbsp; Generate HTML</button>
+</div>
+
+<div class="layout">
+
+  <!-- COL 1: Branding & Presets -->
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head">Branding</div>
+      <div class="panel-body">
+        <div><label class="lbl">Email title</label><input type="text" id="emailTitle" value="New Website Enquiry" /></div>
+        <div>
+          <label class="lbl">Background colour</label>
+          <div class="color-row">
+            <input type="color" id="bgPicker" value="#2716f9" oninput="document.getElementById('bgHex').value=this.value" />
+            <input type="text" id="bgHex" value="#2716f9" oninput="syncPicker()" placeholder="#rrggbb" />
+          </div>
+        </div>
+        <div>
+          <label class="lbl">Header title colour</label>
+          <div class="radio-row">
+            <input type="radio" name="titleColor" id="tcW" value="#ffffff" checked /><label for="tcW">White</label>
+            <input type="radio" name="titleColor" id="tcB" value="#000000" /><label for="tcB">Black</label>
+          </div>
+        </div>
+        <div><label class="lbl">Logo URL</label><input type="text" id="logoUrl" placeholder="https://example.com/logo.png" /></div>
+        <div><label class="lbl">Logo alt text</label><input type="text" id="logoAlt" placeholder="Company name" /></div>
+        <div><label class="lbl">Footer site name</label><input type="text" id="siteName" placeholder="My Website" /></div>
+        <div><label class="lbl">Footer site URL</label><input type="text" id="siteUrl" placeholder="https://example.com" /></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Saved presets <button class="btn sm" onclick="savePreset()">+ Save current</button></div>
+      <div class="panel-body"><div id="presetList"><div class="empty-msg">No presets saved yet</div></div></div>
+    </div>
+  </div>
+
+  <!-- COL 2: Sections & Fields -->
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head">Sections
+        <div class="btn-row">
+          <button class="btn sm" onclick="addEnquirySection()" title="Add an Enquiry Details block (page source field)">+ Enquiry section</button>
+          <button class="btn sm" onclick="addSection()">+ Add section</button>
+        </div>
+      </div>
+      <div class="panel-body"><div id="sectionList"></div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Unassigned fields</div>
+      <div class="panel-body">
+        <div id="unassignedZone" class="unassigned-zone"
+          ondragover="onDragOverZone(event)" ondrop="onDropZone(event)" ondragleave="onDragLeaveEl(event)">
+        </div>
+      </div>
+    </div>
+
+    <div id="addFieldPanel" class="add-field-panel" style="display:none">
+      <div class="aph">Add new field <button class="btn sm" onclick="hideAddField()" style="color:var(--info);border-color:#c8dcf0">Cancel</button></div>
+      <div class="apb">
+        <div class="grid2">
+          <div><label class="lbl">Field key (CS dynamic content key)</label><input type="text" id="newKey" placeholder="e.g. first_name" /></div>
+          <div><label class="lbl">Display label</label><input type="text" id="newLabel" placeholder="e.g. First Name" /></div>
+        </div>
+        <div class="grid2">
+          <div>
+            <label class="lbl">Field type</label>
+            <select id="newType">
+              <option value="text">Plain text</option>
+              <option value="email">Email link</option>
+              <option value="tel">Tel link</option>
+              <option value="url">URL link</option>
+              <option value="address">Address block (multi-line)</option>
+              <option value="message">Message block (pre-wrap)</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Assign to section</label>
+            <select id="newSectionSel"><option value="__unassigned">— Unassigned —</option></select>
+          </div>
+        </div>
+        <div class="btn-row"><button class="btn primary" onclick="confirmAddField()">Add field</button></div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="showAddField()">+ Add field</button>
+    </div>
+  </div>
+
+  <!-- COL 3: Output -->
+  <div class="col col-output">
+    <div class="panel">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('code',this)">Code</button>
+        <button class="tab-btn" onclick="switchTab('preview',this)">Preview</button>
+      </div>
+      <div id="tabCode">
+        <div id="codeOutput" class="code-output"><span class="code-placeholder">Click "Generate HTML" to build your email template.</span></div>
+        <div class="output-footer">
+          <button class="btn" onclick="copyHTML()">&#x2398; Copy HTML</button>
+          <button class="btn" onclick="downloadHTML()">&#x2193; Download .html</button>
+          <span id="statusMsg" class="status-msg"></span>
+        </div>
+      </div>
+      <div id="tabPreview" style="display:none">
+        <div class="preview-wrap" id="previewWrap"><div style="text-align:center;color:#999;font-size:12px;padding:20px">Generate HTML first.</div></div>
+        <div class="output-footer">
+          <button class="btn" onclick="copyHTML()">&#x2398; Copy HTML</button>
+          <button class="btn" onclick="downloadHTML()">&#x2193; Download .html</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let sections = [
+  { id: 's0', title: 'Enquiry Details', type: 'enquiry', pageKey: 'hidden_page' },
+  { id: 's1', title: 'Contact Details' },
+  { id: 's2', title: 'Message' }
+];
+let fields = [
+  { id: 'f1', key: 'first_name',   label: 'First Name', type: 'text',    section: 's1' },
+  { id: 'f2', key: 'last_name',    label: 'Last Name',  type: 'text',    section: 's1' },
+  { id: 'f3', key: 'email',        label: 'Email',      type: 'email',   section: 's1' },
+  { id: 'f4', key: 'phone',        label: 'Phone',      type: 'tel',     section: 's1' },
+  { id: 'f5', key: 'message_text', label: 'Message',    type: 'message', section: 's2' }
+];
+let dragFieldId = null;
+let idCounter = 100;
+let generatedHTML = '';
+
+function uid() { return 'x' + (idCounter++); }
+
+function syncPicker() {
+  const v = document.getElementById('bgHex').value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) document.getElementById('bgPicker').value = v;
+}
+
+function render() { renderSections(); renderUnassigned(); updateSectionSelect(); renderPresets(); }
+
+function renderSections() {
+  const list = document.getElementById('sectionList');
+  list.innerHTML = '';
+  sections.forEach(sec => {
+    const wrap = document.createElement('div');
+    wrap.className = 'section-block';
+    wrap.dataset.secid = sec.id;
+
+    if (sec.type === 'enquiry') {
+      // Special Enquiry Details section — no field drag target, just a page key input
+      wrap.style.borderColor = 'var(--border2)';
+      const head = document.createElement('div');
+      head.className = 'section-head';
+      head.style.cursor = 'default';
+      head.innerHTML = `<span class="handle" style="opacity:0.3">&#8942;&#8942;</span>
+        <input class="section-name" value="${esc(sec.title)}" onchange="updateSecTitle('${sec.id}',this.value)" />
+        <span style="font-size:10px;color:var(--text3);background:var(--surface2);border:1px solid var(--border);padding:2px 6px;border-radius:10px;white-space:nowrap">enquiry</span>
+        <button class="btn sm danger" onclick="removeSection('${sec.id}')">Remove</button>`;
+      const body = document.createElement('div');
+      body.className = 'section-body';
+      body.innerHTML = `<div style="display:flex;align-items:center;gap:8px">
+        <label class="lbl" style="white-space:nowrap;margin:0">Page field key</label>
+        <input type="text" value="${esc(sec.pageKey||'')}" placeholder="e.g. hidden_page"
+          onchange="updateEnquiryKey('${sec.id}',this.value)"
+          style="flex:1;padding:4px 8px;font-size:12px" />
+      </div>`;
+      wrap.appendChild(head); wrap.appendChild(body);
+    } else {
+      wrap.ondragover  = e => { if (dragFieldId) { e.preventDefault(); e.stopPropagation(); wrap.classList.add('drop-target'); } };
+      wrap.ondrop      = e => { e.preventDefault(); wrap.classList.remove('drop-target'); moveFieldTo(dragFieldId, sec.id); };
+      wrap.ondragleave = e => { if (!wrap.contains(e.relatedTarget)) wrap.classList.remove('drop-target'); };
+      const head = document.createElement('div');
+      head.className = 'section-head';
+      head.innerHTML = `<span class="handle">&#8942;&#8942;</span>
+        <input class="section-name" value="${esc(sec.title)}" onchange="updateSecTitle('${sec.id}',this.value)" />
+        <button class="btn sm danger" onclick="removeSection('${sec.id}')">Remove</button>`;
+      const body = document.createElement('div');
+      body.className = 'section-body';
+      const sf = fields.filter(f => f.section === sec.id);
+      if (!sf.length) body.innerHTML = '<div class="section-empty">Drop fields here</div>';
+      else sf.forEach(f => body.appendChild(makeChip(f)));
+      wrap.appendChild(head); wrap.appendChild(body);
+    }
+
+    list.appendChild(wrap);
+  });
+}
+
+function renderUnassigned() {
+  const zone = document.getElementById('unassignedZone');
+  zone.innerHTML = '';
+  const uf = fields.filter(f => f.section === '__unassigned');
+  if (!uf.length) zone.innerHTML = '<div class="empty-msg">Drag fields here to unassign</div>';
+  else uf.forEach(f => zone.appendChild(makeChip(f)));
+}
+
+function makeChip(f) {
+  const chip = document.createElement('div');
+  chip.className = 'field-chip'; chip.draggable = true; chip.dataset.fid = f.id;
+  chip.ondragstart = e => { dragFieldId = f.id; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => chip.classList.add('dragging'), 0); };
+  chip.ondragend   = () => { dragFieldId = null; chip.classList.remove('dragging'); };
+  chip.innerHTML = `<span class="handle" style="font-size:11px">&#8942;</span>
+    <span class="chip-label">${esc(f.label)} <span class="chip-key">${esc(f.key)}</span></span>
+    <span class="type-pill">${f.type}</span>
+    <button class="btn sm danger" onclick="removeField('${f.id}')">&#x2715;</button>`;
+  return chip;
+}
+
+function updateSectionSelect() {
+  const sel = document.getElementById('newSectionSel');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="__unassigned">— Unassigned —</option>';
+  sections.forEach(s => { const o = document.createElement('option'); o.value = s.id; o.textContent = s.title; sel.appendChild(o); });
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+function moveFieldTo(fid, section) {
+  const f = fields.find(f => f.id === fid);
+  if (f) { f.section = section; render(); }
+  dragFieldId = null;
+}
+
+function onDragOverZone(e) { if (dragFieldId) { e.preventDefault(); e.currentTarget.classList.add('drop-target'); } }
+function onDropZone(e)     { e.preventDefault(); e.currentTarget.classList.remove('drop-target'); moveFieldTo(dragFieldId, '__unassigned'); }
+function onDragLeaveEl(e)  { if (!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.classList.remove('drop-target'); }
+
+function addSection()            { sections.push({ id: uid(), title: 'New Section' }); render(); }
+function addEnquirySection()     { sections.unshift({ id: uid(), title: 'Enquiry Details', type: 'enquiry', pageKey: 'hidden_page' }); render(); }
+function updateSecTitle(sid,val) { const s = sections.find(s => s.id === sid); if (s) s.title = val; }
+function updateEnquiryKey(sid,val) { const s = sections.find(s => s.id === sid); if (s) s.pageKey = val; }
+function removeSection(sid) {
+  if (!confirm('Remove this section? Fields will become unassigned.')) return;
+  fields.forEach(f => { if (f.section === sid) f.section = '__unassigned'; });
+  sections = sections.filter(s => s.id !== sid);
+  render();
+}
+
+function showAddField() {
+  const p = document.getElementById('addFieldPanel');
+  p.style.display = 'block';
+  setTimeout(() => p.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+  document.getElementById('newKey').focus();
+}
+function hideAddField() { document.getElementById('addFieldPanel').style.display = 'none'; }
+function confirmAddField() {
+  const k = document.getElementById('newKey').value.trim();
+  const l = document.getElementById('newLabel').value.trim();
+  const t = document.getElementById('newType').value;
+  const s = document.getElementById('newSectionSel').value;
+  if (!k || !l) { alert('Field key and display label are both required.'); return; }
+  fields.push({ id: uid(), key: k, label: l, type: t, section: s });
+  document.getElementById('newKey').value = '';
+  document.getElementById('newLabel').value = '';
+  hideAddField();
+  render();
+}
+function removeField(fid) { fields = fields.filter(f => f.id !== fid); render(); }
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tabCode').style.display    = name === 'code'    ? 'block' : 'none';
+  document.getElementById('tabPreview').style.display = name === 'preview' ? 'block' : 'none';
+}
+
+function dc(key) { return '{{dc:form:data key="' + key + '"}}'; }
+
+function buildFieldRow(f) {
+  const lbl = `<td style="padding:4px 0;color:#888888;font-size:14px;width:120px;vertical-align:top">${esc(f.label)}</td>`;
+  let val;
+  switch (f.type) {
+    case 'email':
+      val = `<td style="padding:4px 0;font-size:14px"><a href="mailto:${dc(f.key)}" style="color:#1a7bbf;text-decoration:none">${dc(f.key)}</a></td>`; break;
+    case 'tel':
+      val = `<td style="padding:4px 0;font-size:14px"><a href="tel:${dc(f.key)}" style="color:#1a7bbf;text-decoration:none">${dc(f.key)}</a></td>`; break;
+    case 'url':
+      val = `<td style="padding:4px 0;font-size:14px"><a href="${dc(f.key)}" style="color:#1a7bbf;text-decoration:none">${dc(f.key)}</a></td>`; break;
+    case 'address':
+      val = `<td style="padding:4px 0;font-size:14px;color:#333333">${dc(f.key)}</td>`; break;
+    case 'message':
+      return `<tr><td colspan="2" style="padding:8px 0"><p style="margin:0;color:#444444;font-size:14px;line-height:1.6;white-space:pre-wrap">${dc(f.key)}</p></td></tr>`;
+    default:
+      val = `<td style="padding:4px 0;color:#0d1f2d;font-size:14px;font-weight:bold">${dc(f.key)}</td>`;
+  }
+  return `<tr>${lbl}${val}</tr>`;
+}
+
+function buildSection(sec, isLast) {
+  const divider = isLast ? '' : '\n        <tr><td style="padding:16px 28px 0"><div style="border-top:1px solid #f0f0f0"></div></td></tr>';
+
+  if (sec.type === 'enquiry') {
+    if (!sec.pageKey) return '';
+    return `
+        <!-- ${esc(sec.title)} -->
+        <tr>
+          <td style="padding:20px 28px 0">
+            <p style="margin:0 0 10px;color:#0d1f2d;font-size:18px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #e0e0e0;padding-bottom:8px">${esc(sec.title)}</p>
+            <table width="100%" cellpadding="0" cellspacing="0"><tbody>
+              <tr>
+                <td style="padding:4px 0;color:#888888;font-size:14px;width:120px;vertical-align:top">Page</td>
+                <td style="padding:4px 0;color:#333333;font-size:14px">${dc(sec.pageKey)}</td>
+              </tr>
+            </tbody></table>
+          </td>
+        </tr>${divider}`;
+  }
+
+  const sf = fields.filter(f => f.section === sec.id);
+  if (!sf.length) return '';
+  const rows = sf.map(f => '              ' + buildFieldRow(f)).join('\n');
+  return `
+        <!-- ${esc(sec.title)} -->
+        <tr>
+          <td style="padding:14px 28px 0">
+            <p style="margin:0 0 10px;color:#0d1f2d;font-size:18px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #e0e0e0;padding-bottom:8px">${esc(sec.title)}</p>
+            <table width="100%" cellpadding="0" cellspacing="0"><tbody>
+${rows}
+            </tbody></table>
+          </td>
+        </tr>${divider}`;
+}
+
+function generate() {
+  const bg        = document.getElementById('bgHex').value.trim() || '#2716f9';
+  const tc        = document.querySelector('input[name=titleColor]:checked').value;
+  const title     = document.getElementById('emailTitle').value.trim() || 'New Enquiry';
+  const logoUrl   = document.getElementById('logoUrl').value.trim();
+  const logoAlt   = document.getElementById('logoAlt').value.trim() || 'Logo';
+  const siteName  = document.getElementById('siteName').value.trim();
+  const siteUrl   = document.getElementById('siteUrl').value.trim();
+
+  const logoBlock = logoUrl ? `\n                  <tr><td style="width:150px;max-width:150px"><img src="${logoUrl}" alt="${esc(logoAlt)}" width="150" style="display:block;width:150px;max-width:150px;height:auto;border:0" /></td></tr>` : '';
+
+  // Build sections, passing isLast to suppress trailing divider on final populated section
+  const populated = sections.filter(sec =>
+    sec.type === 'enquiry' ? !!sec.pageKey : fields.some(f => f.section === sec.id)
+  );
+  const sectionsHTML = populated.map((sec, i) => buildSection(sec, i === populated.length - 1)).join('');
+
+  const footerLink = siteUrl
+    ? `<a href="${siteUrl}" style="color:${tc};text-decoration:none">${esc(siteName || siteUrl)}</a>`
+    : esc(siteName);
+  const footerText = (siteName || siteUrl)
+    ? `This enquiry was submitted via ${footerLink}`
+    : 'Submitted via your website';
+
+  const html =
+`<table width="100%" cellpadding="0" cellspacing="0" style="background-color:${bg};padding:20px 0">
+  <tbody>
+    <tr>
+      <td align="center">
+        <table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;background-color:#ffffff;border-radius:4px;overflow:hidden">
+          <tbody>
+            <!-- Header -->
+            <tr>
+              <td align="center" style="background-color:${bg};padding:20px 28px;text-align:center">
+                <table cellpadding="0" cellspacing="0" style="margin:0 auto"><tbody>${logoBlock}
+                </tbody></table>
+                <p style="margin:10px 0 0;color:${tc};font-size:24px;letter-spacing:0.3px;font-weight:700">${esc(title)}</p>
+              </td>
+            </tr>${sectionsHTML}
+            <!-- Footer -->
+            <tr>
+              <td align="center" style="background-color:${bg};padding:16px 28px 20px">
+                <p style="margin:0;color:${tc};font-size:11px">${footerText}</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>`;
+
+  generatedHTML = html;
+  document.getElementById('codeOutput').textContent = html;
+
+  const pw = document.getElementById('previewWrap');
+  pw.innerHTML = '';
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'width:100%;border:none;display:block;min-height:400px;';
+  pw.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(html);
+  iframe.contentDocument.close();
+  setTimeout(() => { try { iframe.style.height = (iframe.contentDocument.body.scrollHeight + 30) + 'px'; } catch(e) {} }, 200);
+
+  setStatus('Template generated.', 'ok');
+}
+
+function copyHTML() {
+  if (!generatedHTML) { alert('Generate HTML first.'); return; }
+  navigator.clipboard.writeText(generatedHTML).then(() => {
+    setStatus('Copied to clipboard ✓', 'ok'); setTimeout(() => setStatus(''), 2500);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = generatedHTML; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    setStatus('Copied to clipboard ✓', 'ok'); setTimeout(() => setStatus(''), 2500);
+  });
+}
+
+function downloadHTML() {
+  if (!generatedHTML) { alert('Generate HTML first.'); return; }
+  const slug = (document.getElementById('emailTitle').value || 'email-template').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+  const blob = new Blob([generatedHTML], { type: 'text/html' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = slug + '.html'; a.click();
+  setStatus('Downloaded ' + slug + '.html', 'ok'); setTimeout(() => setStatus(''), 2500);
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('statusMsg');
+  if (el) { el.textContent = msg; el.className = 'status-msg' + (type ? ' ' + type : ''); }
+}
+
+const PKEY = 'cs-email-builder-v2';
+function getPresets() { try { return JSON.parse(localStorage.getItem(PKEY) || '[]'); } catch(e) { return []; } }
+
+function savePreset() {
+  const name = prompt('Name this preset:');
+  if (!name) return;
+  const preset = {
+    name,
+    branding: {
+      emailTitle: document.getElementById('emailTitle').value,
+      bgColor:    document.getElementById('bgHex').value,
+      titleColor: document.querySelector('input[name=titleColor]:checked').value,
+      logoUrl:    document.getElementById('logoUrl').value,
+      logoAlt:    document.getElementById('logoAlt').value,
+      siteName:   document.getElementById('siteName').value,
+      siteUrl:    document.getElementById('siteUrl').value
+    },
+    sections: JSON.parse(JSON.stringify(sections)),
+    fields:   JSON.parse(JSON.stringify(fields))
+  };
+  const list = getPresets(); list.push(preset);
+  localStorage.setItem(PKEY, JSON.stringify(list));
+  renderPresets();
+  setStatus('Preset "' + name + '" saved.', 'ok'); setTimeout(() => setStatus(''), 2000);
+}
+
+function renderPresets() {
+  const pl = document.getElementById('presetList');
+  const list = getPresets();
+  if (!list.length) { pl.innerHTML = '<div class="empty-msg">No presets saved yet</div>'; return; }
+  pl.innerHTML = '';
+  list.forEach((p, i) => {
+    const row = document.createElement('div'); row.className = 'preset-row';
+    row.innerHTML = `<span class="preset-name">${esc(p.name)}</span>
+      <div class="btn-row">
+        <button class="btn sm" onclick="loadPreset(${i})">Load</button>
+        <button class="btn sm danger" onclick="deletePreset(${i})">&#x2715;</button>
+      </div>`;
+    pl.appendChild(row);
+  });
+}
+
+function loadPreset(i) {
+  const p = getPresets()[i]; if (!p) return;
+  const b = p.branding;
+  document.getElementById('emailTitle').value = b.emailTitle || '';
+  document.getElementById('bgHex').value      = b.bgColor    || '#2716f9';
+  document.getElementById('bgPicker').value   = b.bgColor    || '#2716f9';
+  document.querySelectorAll('input[name=titleColor]').forEach(r => r.checked = r.value === b.titleColor);
+  document.getElementById('logoUrl').value    = b.logoUrl    || '';
+  document.getElementById('logoAlt').value    = b.logoAlt    || '';
+  document.getElementById('siteName').value   = b.siteName   || '';
+  document.getElementById('siteUrl').value    = b.siteUrl    || '';
+  sections = JSON.parse(JSON.stringify(p.sections));
+  fields   = JSON.parse(JSON.stringify(p.fields));
+  render();
+  setStatus('Preset "' + p.name + '" loaded.', 'ok'); setTimeout(() => setStatus(''), 2000);
+}
+
+function deletePreset(i) {
+  if (!confirm('Delete this preset?')) return;
+  const list = getPresets(); list.splice(i, 1);
+  localStorage.setItem(PKEY, JSON.stringify(list)); renderPresets();
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+render();
+</script>
 </body>
 </html>
