@@ -1,6 +1,6 @@
 <h1>CS Form Email Builder</h1>
 
-<p>A standalone browser-based tool for generating professional HTML email notification templates for <a href="https://theme.co/">Cornerstone (Themeco)</a> WordPress forms, using Cornerstone's <code>{{dc:form:data key=""}}</code> dynamic content syntax.</p>
+<p>A standalone browser-based tool for generating professional HTML email notification templates for <a href="https://theme.co/">Cornerstone Forms (Themeco)</a>, using Cornerstone's <code>{{dc:form:data key=""}}</code> dynamic content syntax.</p>
 
 <p>Built by <a href="https://www.whitemedia.uk/">Christopher White — White Media</a><br>
 Built with assistance from <a href="https://www.anthropic.com/">Claude</a> (Anthropic)</p>
